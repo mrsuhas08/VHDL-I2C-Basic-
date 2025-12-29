@@ -202,12 +202,12 @@ begin
                 
                 when rd_ack =>
                 
-                        if fedge = '1' then
+                        if redge = '1' then
                         
                             if sdio = '0' then
+                            
                                 drive   <=  '1';
                                 count   <=  0;
-                                sdo     <=  addr_shift(7);
                                 state   <=  rw_addr;
                                 
                             else
@@ -223,10 +223,10 @@ begin
                         drive   <=  '1';
                         
                         if fedge = '1' then
-                            sdo         <=  addr_shift(6);
+                            sdo         <=  addr_shift(7);
                             addr_shift  <=  addr_shift(6 downto 0) & '0';
                             
-                            if count = 7 then
+                            if count = 8 then
                                 count   <=  0;
                                 drive   <=  '0';
                                 state   <=  rd_ack2;
@@ -240,20 +240,18 @@ begin
                                     
                 when rd_ack2 =>
                 
-                        if fedge = '1' then
+                        if redge = '1' then
                         
                             if sdio = '0' then
                                 
                                 if r_w = '0' then
                                     drive   <=  '1';
-                                    sdo     <=  data_shift(7);
                                     count   <=  0;
                                     state   <=  wr_data;
                                     
                                 elsif r_w = '1' then
                                     drive       <=  '0';
-                                    count       <=  7;
---                                    data_shift  <=  (others => '0');
+                                    count       <=  8;
                                     state       <=  rd_data;
                                     
                                 end if;
@@ -268,10 +266,10 @@ begin
                 when wr_data =>
                 
                         if fedge = '1' then
-                            sdo     <=  data_shift(6);
+                            sdo     <=  data_shift(7);
                             data_shift  <=  data_shift(6 downto 0) & '0';
                             
-                            if count = 7 then
+                            if count = 8 then
                                 count   <=  0;
                                 drive   <=  '0';
                                 state   <=  rd_ack3;
@@ -287,7 +285,7 @@ begin
                 
                         if fedge = '1' then
                         
-                            if sdio <=  '0' then
+                            if sdio =  '0' then
                                 drive   <=  '1';
                                 state   <=  stop;
                                 
@@ -297,9 +295,13 @@ begin
                 
                 when rd_data =>
                 
+                        if redge = '1' then
+                            data_shift  <=  data_shift(6 downto 0) & sdio;
+                        
+                        end if;
+                        
                         if fedge = '1' then
-                            data_shift(count)   <=  sdio;
-                            
+                        
                             if count = 0 then
                                 data_out    <=  data_shift;
                                 drive       <=  '1';
@@ -326,6 +328,7 @@ begin
                             drive   <=  '1';
                             sdo     <=  '1';
                             state   <=  idle;
+                            
                         end if;
                     
                 when others =>
@@ -339,3 +342,4 @@ begin
     end process;
     
 end Behavioral;
+
