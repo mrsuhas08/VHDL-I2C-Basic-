@@ -1,3 +1,4 @@
+
 ----------------------------------------------------------------------------------
 -- Company: 
 -- Engineer: 
@@ -124,20 +125,25 @@ begin
                         end if;
                         
                 when s_addr =>
-                
+                        
                         if redge = '1' then
-                            slva_shift(count)  <=  sdio;
+                            slva_shift  <=  slva_shift(6 downto 0) & sdio;
                             
+                        end if;
+                        
+                        if fedge = '1' then
+                        
                             if count = 0 then
-                            
+                                
                                 if slva_shift(7 downto 1) = address then
                                     sdo     <=  '0';
                                     count   <=  0;
+                                    drive   <=  '1';
                                     state   <=  wr_ack;
                                     
                                 else
                                     sdo     <=  '1';
-                                    state   <=  wr_ack;
+                                    state   <=  stop;
                                     
                                 end if;
                                 
@@ -147,23 +153,16 @@ begin
                             end if;
                             
                         end if;
-                
+                        
                 when wr_ack =>
                 
                         if fedge = '1' then
-                            drive   <=  '1';
                             
                             if slva_shift(7 downto 1) = address then
-                            
-                                if count = 1 then
-                                    drive   <=  '0';
-                                    count   <=  7;
-                                    state   <=  rw_addr;
-                                    
-                                else
-                                    count   <=  count + 1;
-                                    
-                                end if;
+                                drive   <=  '0';
+                                count   <=  7;
+                                addr_shift(count)   <=  sdio;
+                                state   <=  rw_addr;
                                 
                             else
                                 drive   <=  '0';
@@ -177,19 +176,25 @@ begin
                 when rw_addr =>
                 
                         if redge = '1' then
-                            addr_shift(count)  <=  sdio;
-                                
+                            addr_shift  <=  addr_shift(6 downto 0) & sdio;
+                        
+                        end if;
+                        
+                        if fedge = '1' then
+                        
                             if count = 0 then
                                 reg_addr    <=  addr_shift;
                                 count       <=  0;
                                 
                                 if slva_shift(0) = '1' then
                                     data_shift  <=  mem(TO_INTEGER(unsigned(addr_shift)));
+                                    drive       <=  '1';
                                     sdo         <=  '0';
                                     state       <=  wr_ack2;
                                     
                                 elsif slva_shift(0) = '0' then
                                     data_shift  <=  (others => '0');
+                                    drive       <=  '1';
                                     sdo         <=  '0';
                                     state       <=  wr_ack2;
                                     
@@ -205,32 +210,17 @@ begin
                 when wr_ack2 =>
                 
                         if fedge = '1' then
-                            drive   <=  '1';
                             
                             if slva_shift(0) = '0' then
-                            
-                                if count = 1 then
-                                    count   <=  7;
-                                    drive   <=  '0';
-                                    state   <=  wr_data;
-                                    
-                                else
-                                    count   <=  count + 1;
-                                    
-                                end if;
+                                count   <=  7;
+                                drive   <=  '0';
+                                state   <=  wr_data;
                             
                             elsif slva_shift(0) = '1' then
-                            
-                                if count = 1 then
-                                    count   <=  7;
-                                    drive   <=  '1';
-                                    sdo     <=  data_shift(7);
-                                    state   <=  rd_data;
-                                    
-                                else
-                                    count   <=  count + 1;
-                                    
-                                end if;
+                                count   <=  7;
+                                drive   <=  '1';
+                                sdo     <=  data_shift(7);
+                                state   <=  rd_data;
                             
                             end if;
                 
@@ -239,11 +229,16 @@ begin
                 when wr_data =>
                 
                         if redge = '1' then
-                            data_shift(count)   <=  sdio;
-                            
+                            data_shift  <=  data_shift(6 downto 0) & sdio;
+                        
+                        end if;
+                        
+                        if fedge = '1' then
+                        
                             if count = 0 then
                                 mem(TO_INTEGER(unsigned(reg_addr))) <=  data_shift;
                                 count   <=  0;
+                                drive   <= '1';
                                 sdo     <=  '0';
                                 state   <=  wr_ack3;
                             
@@ -257,23 +252,14 @@ begin
                 when wr_ack3 =>
                 
                         if fedge = '1' then
-                            drive   <=  '1';
-                            
-                            if count = 1 then
-                                drive   <=  '0';
-                                state   <=  stop;
-                                
-                            else
-                                count   <=  count + 1;
-                                    
-                            end if;
+                            drive   <=  '0';
+                            state   <=  stop;
                             
                         end if;
                 
                 when rd_data =>
                 
                         if fedge = '1' then
-                            
                             sdo         <=  data_shift(6);
                             data_shift  <=  data_shift(6 downto 0) & '0';
                             
@@ -295,8 +281,8 @@ begin
                         if redge = '1' then
                         
                             if sdio = '0' then
-                                drive   <=  '1';
-                                sdo     <=  '0';
+                                drive   <=  '0';
+                                sdo     <=  '1';
                                 state   <=  stop;
                                 
                             else
@@ -309,9 +295,6 @@ begin
                 when stop =>
                     
                     if redge = '1' then
-                        sdo     <=  '1';
-                        count   <=  0;
-                        drive   <=  '0';
                         state   <=  idle;
                     
                     end if;
